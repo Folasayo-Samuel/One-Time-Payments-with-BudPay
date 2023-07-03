@@ -5,47 +5,39 @@ require("dotenv").config();
 
 app.use(express.json());
 
-const api_Public_Key = process.env.BUDPAY_PUBLIC_KEY;
-const api_Secret_Key = process.env.BUDPAY_SECRET_KEY;
+const secretKey = process.env.BUDPAY_SECRET_KEY;
 
 async function processPayment() {
   try {
-    const paymentIntent = await createPaymentIntent();
-
-    const paymentUrl = getPaymentUrl(paymentIntent.id);
-
+    const paymentUrl = await createPaymentLink();
     console.log("Payment URL:", paymentUrl);
   } catch (error) {
     console.error("Payment failed:", error.message);
   }
 }
 
-async function createPaymentIntent() {
-  const url = "https://api.budpay.com/api/v2/payment_intents";
+async function createPaymentLink() {
+  const url = "https://api.budpay.com/api/v2/create_payment_link";
 
   const response = await axios.post(
     url,
     {
-      amount: 1000,
-      currency: "USD",
-      description: "One-time payment",
+      amount: "2500",
+      currency: "NGN",
+      name: "Name",
+      description: "my description",
+      redirect: "https://your_redirect_link",
     },
     {
-      auth: {
-        username: api_Public_Key,
-        password: api_Secret_Key,
+      headers: {
+        Authorization: `Bearer ${secretKey}`,
+        "Content-Type": "application/json",
       },
     }
   );
 
-  return response.data;
+  return response.data.paymentUrl;
 }
-
-function getPaymentUrl(paymentIntentId) {
-  return `https://payment.budpay.com/${paymentIntentId}`;
-}
-
-processPayment();
 
 app.post("/payment-notification", async (req, res) => {
   try {
@@ -60,7 +52,17 @@ app.post("/payment-notification", async (req, res) => {
     }
   } catch (error) {
     console.error("Error processing payment notification:", error.message);
-    res.status(500).send({ error });
+    res.status(500).send(error.message);
+  }
+});
+
+app.post("/process-payment", async (req, res) => {
+  try {
+    await processPayment();
+    res.status(200).send({ message: "Payment processing initiated" });
+  } catch (error) {
+    console.error("Error processing payment:", error.message);
+    res.status(500).send(error.message);
   }
 });
 
