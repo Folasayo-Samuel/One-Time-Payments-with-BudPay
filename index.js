@@ -11,32 +11,38 @@ async function processPayment() {
   try {
     const paymentUrl = await createPaymentLink();
     console.log("Payment URL:", paymentUrl);
+    return paymentUrl;
   } catch (error) {
     console.error("Payment failed:", error.message);
+    // throw error;
   }
 }
 
 async function createPaymentLink() {
   const url = "https://api.budpay.com/api/v2/create_payment_link";
 
-  const response = await axios.post(
-    url,
-    {
-      amount: "2500",
-      currency: "NGN",
-      name: "Name",
-      description: "my description",
-      redirect: "https://your_redirect_link",
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${secretKey}`,
-        "Content-Type": "application/json",
-      },
-    }
-  );
+  const requestData = {
+    amount: "2500",
+    currency: "NGN",
+    name: "Folasayo Samuel",
+    description: "my description",
+    redirect: "https://www.google.com",
+  };
 
-  return response.data.paymentUrl;
+  const headers = {
+    Authorization: `Bearer ${secretKey}`,
+    "Content-Type": "application/json",
+  };
+
+  try {
+    const response = await axios.post(url, requestData, { headers });
+    const responseData = response.data;
+    const { ref_id, payment_link } = responseData.data;
+    return { ref_id, payment_link };
+  } catch (error) {
+    console.error("Error creating payment link:", error.message);
+    throw error;
+  }
 }
 
 app.post("/payment-notification", async (req, res) => {
@@ -58,8 +64,10 @@ app.post("/payment-notification", async (req, res) => {
 
 app.post("/process-payment", async (req, res) => {
   try {
-    await processPayment();
-    res.status(200).send({ message: "Payment processing initiated" });
+    const paymentData = await processPayment();
+    res
+      .status(200)
+      .send({ message: "Payment processing initiated", data: paymentData });
   } catch (error) {
     console.error("Error processing payment:", error.message);
     res.status(500).send(error.message);
