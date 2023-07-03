@@ -45,23 +45,6 @@ async function createPaymentLink() {
   }
 }
 
-app.post("/payment-notification", async (req, res) => {
-  try {
-    const isValid = await verifyPaymentNotification(req.body);
-
-    if (isValid) {
-      console.log("Payment processed successfully:", req.body);
-      res.status(200).send({ message: "Payment processed successfully" });
-    } else {
-      console.error("Invalid payment notification");
-      res.status(400).send({ message: "Invalid payment notification" });
-    }
-  } catch (error) {
-    console.error("Error processing payment notification:", error.message);
-    res.status(500).send(error.message);
-  }
-});
-
 app.post("/process-payment", async (req, res) => {
   try {
     const paymentData = await processPayment();
@@ -74,29 +57,20 @@ app.post("/process-payment", async (req, res) => {
   }
 });
 
-async function verifyPaymentNotification(notification) {
-  const { paymentId, amount, currency, signature, transactionDetails } =
-    notification;
+app.post("/payment-notification", (req, res) => {
+  try {
+    const { notify, notifyType, data } = req.body;
 
-  const isSignatureValid = await verifySignature(
-    signature,
-    paymentId,
-    amount,
-    currency
-  );
-  if (!isSignatureValid) {
-    return false;
-  }
+    if (notify === "transaction" && notifyType === "successful") {
+      console.log("Successful transaction notification:", data);
+    }
 
-  const isTransactionValid = await verifyTransaction(
-    transactionDetails,
-    amount
-  );
-  if (!isTransactionValid) {
-    return false;
+    res.status(200).send({ message: "Notification received successfully" });
+  } catch (error) {
+    console.error("Error processing notification:", error.message);
+    res.status(500).send(error.message);
   }
-  return true;
-}
+});
 
 const port = 3000;
 app.listen(port, () => {
